@@ -239,7 +239,7 @@ def main():
         extract_info_from_file(file_path, output_data, images_folder)
     
     # 确保Excel文件路径唯一
-    excel_file_path = "extracted_flight_info.xlsx"
+    excel_file_path = "departure_flight_info.xlsx"
     unique_excel_file_path = ensure_unique_excel_file_path(excel_file_path)
     
     # 重命名现有文件
