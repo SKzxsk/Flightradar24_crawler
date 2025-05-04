@@ -24,5 +24,4 @@ I don't solve technical problems (I am not from science class).
 //Because of the use of selenium libraries, there is no matching library for the mobile side, if there is a solution, we can discuss it.
 
 demo：
-[Snipaste_2025-05-03_20-15-23.jpg
-](https://raw.githubusercontent.com/SKzxsk/Flightradar24_crawler/refs/heads/main/Snipaste_2025-05-03_20-15-23.jpg)
+![image](https://raw.githubusercontent.com/SKzxsk/Flightradar24_crawler/refs/heads/main/Snipaste_2025-05-03_20-15-23.jpg)
