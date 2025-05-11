@@ -1,5 +1,5 @@
 # Flightradar24_crawler
-Collect the scheduled flight information of a specified large aircraft, or the scheduled flight information of a specified aircraft registration number  Grab the source is flightradar24, using python script 
+Collect the scheduled flight information of a specified large aircraft, or the scheduled flight information of a specified aircraft registration number ,the source is flightradar24, using python script 
 
 本工具旨在帮助拍摄飞机的爱好者可以提前做好拍摄计划，收集指定的大型飞机的计划航班信息，或者指定的飞机注册号的计划航班信息
 爬虫来源是flightradar24，使用的是python脚本
