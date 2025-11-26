@@ -26,17 +26,17 @@ try:
     
     # 模拟点击“Accept Cookies”按钮
     try:
-        accept_cookies_button = driver.find_element(By.ID, 'onetrust-accept-btn-handler')
+        accept_cookies_button = driver.find_element(By.ID, 'didomi-notice-agree-button')
         accept_cookies_button.click()
         print("Cookies 接受按钮已点击")
     except Exception as e:
         print(f"无法找到或点击 Cookies 接受按钮: {e}")
     
     # 等待页面加载完成（可以根据实际情况调整等待时间）
-    time.sleep(2)
+    time.sleep(3)
     
     # 模拟点击“Load later flights”按钮并重复N次
-    for _ in range(4):
+    for _ in range(5):
         try:
             # 查找按钮元素
             button = driver.find_element(By.CSS_SELECTOR, 'button[data-testid="airport-arrival-departure__load-later-flights"]')
@@ -45,7 +45,7 @@ try:
             button.click()
             
             # 等待页面加载完成（可以根据实际情况调整等待时间）
-            time.sleep(2)
+            time.sleep(5)
         except Exception as e:
             print(f"无法找到或点击按钮: {e}")
             break
@@ -105,13 +105,13 @@ def extract_info_from_file(file_path, output_data, images_folder):
                 time_text = time_formatter_element.get_text(strip=True)
                 
                 # 提取航空型号
-                aircraft_model_element = item.find('span', class_='inline-flex h-4 items-center rounded px-1 text-2xs font-semibold bg-blue-200 text-blue-600')
+                aircraft_model_element = item.find('span', class_='inline-flex h-4 items-center rounded px-1 font-alt-regular text-2xs font-medium bg-blue-200 text-blue-600')
                 if not aircraft_model_element:
                     continue
                 aircraft_model_text = aircraft_model_element.get_text(strip=True).split()[0]  # 提取型号部分
                 
                 # 提取日期
-                date_element = item.find_previous('h3', class_='inline-flex items-center text-sm uppercase')
+                date_element = item.find_previous('h3', class_='inline-flex items-center text-sm')
                 if not date_element:
                     continue
                 date_text = date_element.get_text(strip=True)
