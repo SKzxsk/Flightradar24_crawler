@@ -104,11 +104,39 @@ def extract_info_from_file(file_path, output_data, images_folder):
                     continue
                 time_text = time_formatter_element.get_text(strip=True)
                 
-                # 提取航空型号
-                aircraft_model_element = item.find('span', class_='inline-flex h-4 items-center rounded px-1 font-alt-regular text-2xs font-medium bg-blue-200 text-blue-600')
-                if not aircraft_model_element:
+                # 提取航空型号 - 使用多种方法尝试
+                aircraft_model_text = None
+                
+                # 方法1: 通过航班号所在的span元素查找
+                flight_span = item.find('span', class_='truncate text-sm text-gray-900')
+                if flight_span:
+                    # 查找包含 bg-blue-200 的span（机型标签的特征类）
+                    model_span = flight_span.find('span', class_=lambda x: x and 'bg-blue-200' in x)
+                    if model_span:
+                        aircraft_model_text = model_span.get_text(strip=True).split()[0]
+                
+                # 方法2: 如果方法1失败，使用正则匹配class
+                if not aircraft_model_text:
+                    model_span = item.find('span', class_=re.compile(r'.*bg-blue-200.*text-blue-600.*'))
+                    if model_span:
+                        aircraft_model_text = model_span.get_text(strip=True).split()[0]
+                
+                # 方法3: 如果前两种方法都失败，直接在航班号span中提取文本
+                if not aircraft_model_text and flight_span:
+                    full_text = flight_span.get_text(strip=True)
+                    # 使用正则提取机型代码（通常是字母+数字的组合）
+                    model_match = re.search(r'\b([A-Z]\d{2,3}[A-Z]?|[A-Z]{2,4}\d{1,3}[A-Z]?)\b', full_text)
+                    if model_match:
+                        # 获取所有匹配，排除航班号（通常是字母+4位数字）
+                        all_matches = re.findall(r'\b([A-Z]\d{2,3}[A-Z]?|[A-Z]{2,4}\d{1,3}[A-Z]?)\b', full_text)
+                        # 过滤掉航班号格式（如CA4367），保留机型格式（如B738）
+                        for match in all_matches:
+                            if not re.match(r'^[A-Z]{2}\d{4}', match):  # 排除航班号格式
+                                aircraft_model_text = match
+                                break
+                
+                if not aircraft_model_text:
                     continue
-                aircraft_model_text = aircraft_model_element.get_text(strip=True).split()[0]  # 提取型号部分
                 
                 # 提取日期
                 date_element = item.find_previous('h3', class_='inline-flex items-center text-sm')
