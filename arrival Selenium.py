@@ -15,69 +15,71 @@ from openpyxl.styles import Alignment, Font
 from datetime import datetime
 from selenium.webdriver.chrome.options import Options
 
-# 创建 ChromeOptions 实例
-options = Options()
-options.add_argument('--ignore-certificate-errors')
-options.add_argument('--allow-insecure-localhost')
-options.add_argument('--disable-web-security')
-options.add_argument('--allow-running-insecure-content')
-
-
-# 创建 WebDriver 实例并自动管理 ChromeDriver
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-
-try:
-    # 打开目标网页
-    driver.get('https://www.flightradar24.com/airport/szx/arrivals')
-    time.sleep(5)    
-    driver.execute_script("window.stop();")  # 主动终止加载
-    
-    # 模拟点击“Accept Cookies”按钮
-    try:
-        accept_cookies_button = driver.find_element(By.ID, 'didomi-notice-agree-button')
-        accept_cookies_button.click()
-        print("Cookies 接受按钮已点击")
-    except Exception as e:
-        print(f"无法找到或点击 Cookies 接受按钮: {e}")
-    
-    # 等待页面加载完成（可以根据实际情况调整等待时间）
-    time.sleep(3)
-    
-    # 模拟点击“Load later flights”按钮并重复N次
-    for _ in range(5):
-        try:
-            # 查找按钮元素
-            button = driver.find_element(By.CSS_SELECTOR, 'button[data-testid="airport-arrival-departure__load-later-flights"]')
-            
-            # 点击按钮
-            button.click()
-            
-            # 等待页面加载完成（可以根据实际情况调整等待时间）
-            time.sleep(5)
-        except Exception as e:
-            print(f"无法找到或点击按钮: {e}")
-            break
-    
-    # 获取网页源代码
-    page_source = driver.page_source
-    
-    # 将网页源代码保存到文件
-    with open('flightradar24_szx_arrivals.html', 'w', encoding='utf-8') as file:
-        file.write(page_source)
-        
-    print("网页源代码已成功保存到 flightradar24_szx_arrivals.html 文件中")
-
-
-finally:
-    # 关闭浏览器
-    driver.quit()
-
-
 # 关键字列表
 keywords = ['74', '75', '76', '77', '78', '33', '35', '36', '38']
 
 def log(message):
     print(f"[LOG] {message}")
+
+def fetch_webpage_source(html_filename):
+    """
+    爬取网页源代码并保存到文件
+    """
+    # 创建 ChromeOptions 实例
+    options = Options()
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--allow-insecure-localhost')
+    options.add_argument('--disable-web-security')
+    options.add_argument('--allow-running-insecure-content')
+
+    # 创建 WebDriver 实例并自动管理 ChromeDriver
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+    try:
+        # 打开目标网页
+        driver.get('https://www.flightradar24.com/airport/szx/arrivals')
+        time.sleep(5)    
+        driver.execute_script("window.stop();")  # 主动终止加载
+        
+        # 模拟点击"Accept Cookies"按钮
+        try:
+            accept_cookies_button = driver.find_element(By.ID, 'didomi-notice-agree-button')
+            accept_cookies_button.click()
+            log("Cookies 接受按钮已点击")
+        except Exception as e:
+            log(f"无法找到或点击 Cookies 接受按钮: {e}")
+        
+        # 等待页面加载完成
+        time.sleep(3)
+        
+        # 模拟点击"Load later flights"按钮并重复N次
+        for i in range(5):
+            try:
+                # 查找按钮元素
+                button = driver.find_element(By.CSS_SELECTOR, 'button[data-testid="airport-arrival-departure__load-later-flights"]')
+                
+                # 点击按钮
+                button.click()
+                log(f"点击 'Load later flights' 按钮 - 第 {i+1} 次")
+                
+                # 等待页面加载完成
+                time.sleep(5)
+            except Exception as e:
+                log(f"无法找到或点击按钮: {e}")
+                break
+        
+        # 获取网页源代码
+        page_source = driver.page_source
+        
+        # 将网页源代码保存到文件
+        with open(html_filename, 'w', encoding='utf-8') as file:
+            file.write(page_source)
+            
+        log(f"网页源代码已成功保存到 {html_filename} 文件中")
+
+    finally:
+        # 关闭浏览器
+        driver.quit()
 
 def download_image(image_url, folder_path, filename):
     image_path = os.path.join(folder_path, filename)
@@ -113,11 +115,39 @@ def extract_info_from_file(file_path, output_data, images_folder):
                     continue
                 time_text = time_formatter_element.get_text(strip=True)
                 
-                # 提取航空型号
-                aircraft_model_element = item.find('span', class_='inline-flex h-4 items-center rounded px-1 font-alt-regular text-2xs font-medium bg-blue-200 text-blue-600')
-                if not aircraft_model_element:
+                # 提取航空型号 - 使用多种方法尝试
+                aircraft_model_text = None
+                
+                # 方法1: 通过航班号所在的span元素查找
+                flight_span = item.find('span', class_='truncate text-sm text-gray-900')
+                if flight_span:
+                    # 查找包含 bg-blue-200 的span（机型标签的特征类）
+                    model_span = flight_span.find('span', class_=lambda x: x and 'bg-blue-200' in x)
+                    if model_span:
+                        aircraft_model_text = model_span.get_text(strip=True).split()[0]
+                
+                # 方法2: 如果方法1失败，使用正则匹配class
+                if not aircraft_model_text:
+                    model_span = item.find('span', class_=re.compile(r'.*bg-blue-200.*text-blue-600.*'))
+                    if model_span:
+                        aircraft_model_text = model_span.get_text(strip=True).split()[0]
+                
+                # 方法3: 如果前两种方法都失败，直接在航班号span中提取文本
+                if not aircraft_model_text and flight_span:
+                    full_text = flight_span.get_text(strip=True)
+                    # 使用正则提取机型代码（通常是字母+数字的组合）
+                    model_match = re.search(r'\b([A-Z]\d{2,3}[A-Z]?|[A-Z]{2,4}\d{1,3}[A-Z]?)\b', full_text)
+                    if model_match:
+                        # 获取所有匹配，排除航班号（通常是字母+4位数字）
+                        all_matches = re.findall(r'\b([A-Z]\d{2,3}[A-Z]?|[A-Z]{2,4}\d{1,3}[A-Z]?)\b', full_text)
+                        # 过滤掉航班号格式（如CA4367），保留机型格式（如B738）
+                        for match in all_matches:
+                            if not re.match(r'^[A-Z]{2}\d{4}', match):  # 排除航班号格式
+                                aircraft_model_text = match
+                                break
+                
+                if not aircraft_model_text:
                     continue
-                aircraft_model_text = aircraft_model_element.get_text(strip=True).split()[0]  # 提取型号部分
                 
                 # 提取日期
                 date_element = item.find_previous('h3', class_='inline-flex items-center text-sm')
@@ -231,22 +261,25 @@ def rename_existing_file(output_file):
 
 def main():
     current_directory = os.getcwd()
-    html_files = [f for f in os.listdir(current_directory) if f.endswith('.html')]
+    html_filename = 'flightradar24_szx_arrivals.html'
+    html_filepath = os.path.join(current_directory, html_filename)
     
-    if not html_files:
-        log("No HTML files found in the current directory.")
-        return
+    # 检查HTML文件是否已存在
+    if os.path.exists(html_filepath):
+        log(f"发现本地已存在文件: {html_filename}")
+        log("跳过网页爬取步骤,直接开始分析...")
+    else:
+        log(f"本地未找到文件: {html_filename}")
+        log("开始爬取网页源代码...")
+        fetch_webpage_source(html_filename)
     
-    log(f"Found {len(html_files)} HTML files to process.")
-    
+    # 开始处理HTML文件
     output_data = []
     images_folder = os.path.join(current_directory, 'images')
     os.makedirs(images_folder, exist_ok=True)
     
-    for html_file in html_files:
-        file_path = os.path.join(current_directory, html_file)
-        log(f"Processing file: {file_path}")
-        extract_info_from_file(file_path, output_data, images_folder)
+    log(f"Processing file: {html_filepath}")
+    extract_info_from_file(html_filepath, output_data, images_folder)
     
     # 确保Excel文件路径唯一
     excel_file_path = "arrival_flight_info.xlsx"
@@ -264,6 +297,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
